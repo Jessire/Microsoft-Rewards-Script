@@ -23,6 +23,9 @@ test('collects daily task results and points from logger events', () => {
     assert.match(formatTaskSummary(items), /阅读赚积分：已完成（\+30 分）/)
     assert.match(formatTaskSummary(items), /更多活动：已完成（\+15 分）/)
     assert.match(formatTaskSummary(items), /搜索：已完成（\+17 分）/)
+    assert.match(formatTaskSummary(items), /^🟢 每日签到：/m)
+    assert.match(formatTaskSummary(items), /^🟢 阅读赚积分：/m)
+    assert.match(formatTaskSummary(items), /^🟢 搜索：/m)
 
     const rewardsSnapshot = extractRewardsSnapshot(
         {
@@ -67,6 +70,14 @@ test('collects daily task results and points from logger events', () => {
     assert.doesNotMatch(summary, /可领取：0 分/)
     assert.doesNotMatch(summary, /合计：/)
     assert.match(summary, /昵称：Alice/)
+    const detailLines = summary
+        .split('\n')
+        .filter(line => /(?:昵称|每日签到|阅读赚积分|可用积分|今日积分|连续打卡|本次增加)：/.test(line))
+    assert.ok(detailLines.length > 0)
+    assert.ok(
+        detailLines.every(line => /^(?:🔵|🟢|🟡|🟣|🟠|🔴|🟤) /u.test(line)),
+        detailLines.join('\n')
+    )
     assert.doesNotMatch(summary, /example\.com/)
     assert.doesNotMatch(summary, / \| /)
 })

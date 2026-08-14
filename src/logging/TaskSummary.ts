@@ -128,15 +128,15 @@ export class TaskSummaryTracker {
 function statusIcon(status: TaskSummaryStatus): string {
     switch (status) {
         case 'completed':
-            return '✅'
+            return '🟢'
         case 'no-points':
-            return '⚠️'
+            return '🟡'
         case 'in-progress':
-            return '⏳'
+            return '🔵'
         case 'skipped':
-            return '⏭️'
+            return '🟣'
         default:
-            return '🔄'
+            return '🟤'
     }
 }
 
@@ -162,7 +162,7 @@ function formatTaskLine(item: TaskSummaryItem): string {
 }
 
 export function formatTaskSummary(items: TaskSummaryItem[]): string {
-    if (!items.length) return '⚪ 未识别到任务'
+    if (!items.length) return `🟤 未识别到任务`
 
     return items.map(formatTaskLine).join('\n')
 }
@@ -197,12 +197,12 @@ function displayNickname(account: RunSummaryAccount): string {
 function formatRewardsSnapshot(snapshot: RewardsSnapshot): string[] {
     const lines: string[] = []
 
-    if (snapshot.availablePoints !== null) lines.push(`💰 可用积分：${formatPoints(snapshot.availablePoints)}`)
+    if (snapshot.availablePoints !== null) lines.push(`🔵 可用积分：${formatPoints(snapshot.availablePoints)}`)
     if (snapshot.claimablePoints !== null && snapshot.claimablePoints > 0) {
-        lines.push(`🎁 可领取：${formatPoints(snapshot.claimablePoints)}`)
+        lines.push(`🟡 可领取：${formatPoints(snapshot.claimablePoints)}`)
     }
-    if (snapshot.todayPoints !== null) lines.push(`📅 今日积分：${formatPoints(snapshot.todayPoints)}`)
-    if (snapshot.streakDays !== null) lines.push(`🔥 连续打卡：${snapshot.streakDays} 天`)
+    if (snapshot.todayPoints !== null) lines.push(`🟣 今日积分：${formatPoints(snapshot.todayPoints)}`)
+    if (snapshot.streakDays !== null) lines.push(`🟠 连续打卡：${snapshot.streakDays} 天`)
 
     return lines
 }
@@ -219,36 +219,32 @@ export function formatRunSummary(accounts: RunSummaryAccount[]): string {
     const lines = ['📊 Microsoft Rewards 今日汇总', '']
 
     if (!accounts.length) {
-        lines.push('⚪ 没有处理账号')
+        lines.push(`🟤 没有处理账号`)
     }
 
     accounts.forEach((account, index) => {
         if (index > 0) lines.push('', '────────────', '')
 
-        lines.push(`👤 昵称：${displayNickname(account)}`)
+        lines.push(`🔵 昵称：${displayNickname(account)}`)
         if (account.success) {
-            lines.push(
-                ...formatTaskSummary(account.tasks ?? [])
-                    .split('\n')
-                    .map(line => `  ${line}`)
-            )
+            lines.push(...formatTaskSummary(account.tasks ?? []).split('\n'))
             if (account.rewardsSnapshot) {
                 lines.push(...formatRewardsSnapshot(account.rewardsSnapshot))
                 if (account.rewardsSnapshot.availablePoints === null) {
-                    lines.push(`💰 可用积分：${formatPoints(account.finalPoints)}`)
+                    lines.push(`🔵 可用积分：${formatPoints(account.finalPoints)}`)
                 }
             } else {
-                lines.push(`💰 可用积分：${formatPoints(account.finalPoints)}`)
+                lines.push(`🔵 可用积分：${formatPoints(account.finalPoints)}`)
             }
         } else {
-            lines.push(`❌ 运行失败：${account.error ?? '未知错误'}`)
+            lines.push(`🔴 运行失败：${account.error ?? '未知错误'}`)
         }
-        lines.push(`➕ 本次增加：${account.collectedPoints} 分`)
+        lines.push(`🟢 本次增加：${account.collectedPoints} 分`)
     })
 
     if (accounts.length > 1) {
-        lines.push('', '📈 合计：', `  本次增加：${totalCollected} 分`, `  可用积分：${formatPoints(totalBalance)}`)
-        if (totalToday !== null) lines.push(`  今日积分：${formatPoints(totalToday)}`)
+        lines.push('', `🟣 合计：`, `🟢 本次增加：${totalCollected} 分`, `🔵 可用积分：${formatPoints(totalBalance)}`)
+        if (totalToday !== null) lines.push(`🟣 今日积分：${formatPoints(totalToday)}`)
     }
 
     return lines.join('\n')
