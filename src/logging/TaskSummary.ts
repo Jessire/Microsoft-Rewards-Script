@@ -129,12 +129,27 @@ function maskEmail(email: string): string {
     return `${local.slice(0, 1)}***@${domain}`
 }
 
+function statusIcon(status: TaskSummaryStatus): string {
+    switch (status) {
+        case 'completed':
+            return '✅'
+        case 'no-points':
+            return '⚠️'
+        case 'in-progress':
+            return '⏳'
+        case 'skipped':
+            return '⏭️'
+        default:
+            return '🔄'
+    }
+}
+
 function statusText(status: TaskSummaryStatus): string {
     switch (status) {
         case 'completed':
             return '已完成'
         case 'no-points':
-            return '已执行，无新增积分'
+            return '已执行'
         case 'in-progress':
             return '进行中'
         case 'skipped':
@@ -144,16 +159,16 @@ function statusText(status: TaskSummaryStatus): string {
     }
 }
 
-export function formatTaskSummary(items: TaskSummaryItem[]): string {
-    if (!items.length) return '未识别到任务'
+function formatTaskLine(item: TaskSummaryItem): string {
+    const points = item.points === null ? '' : `（+${item.points} 分）`
+    const detail = item.detail ? `，${item.detail}` : ''
+    return `${statusIcon(item.status)} ${item.name}：${statusText(item.status)}${points}${detail}`
+}
 
-    return items
-        .map(item => {
-            const points = item.points === null ? '' : ` +${item.points}分`
-            const detail = item.detail ? `，${item.detail}` : ''
-            return `${item.name}${points}（${statusText(item.status)}${detail}）`
-        })
-        .join('；')
+export function formatTaskSummary(items: TaskSummaryItem[]): string {
+    if (!items.length) return '⚪ 未识别到任务'
+
+    return items.map(formatTaskLine).join('\n')
 }
 
 export interface RunSummaryAccount {
@@ -169,13 +184,30 @@ export interface RunSummaryAccount {
 export function formatRunSummary(accounts: RunSummaryAccount[]): string {
     const totalCollected = accounts.reduce((sum, account) => sum + account.collectedPoints, 0)
     const totalBalance = accounts.reduce((sum, account) => sum + account.finalPoints, 0)
-    const accountDetails = accounts
-        .map(account => {
-            const taskText = formatTaskSummary(account.tasks ?? [])
-            const state = account.success ? taskText : `运行失败：${account.error ?? '未知错误'}`
-            return `${maskEmail(account.email)}：${state}；增加 ${account.collectedPoints} 分；当前 ${account.finalPoints} 分`
-        })
-        .join(' | ')
+    const lines = ['📊 Microsoft Rewards 今日任务汇总', '']
 
-    return `今日任务汇总 | ${accountDetails || '没有处理账号'} | 总增加积分：${totalCollected} | 当前积分合计：${totalBalance}`
+    if (!accounts.length) {
+        lines.push('⚪ 没有处理账号')
+    }
+
+    accounts.forEach((account, index) => {
+        if (index > 0) lines.push('', '────────────', '')
+
+        lines.push(`👤 账号：${maskEmail(account.email)}`)
+        if (account.success) {
+            lines.push('📋 任务完成情况：')
+            lines.push(
+                ...formatTaskSummary(account.tasks ?? [])
+                    .split('\n')
+                    .map(line => `  ${line}`)
+            )
+        } else {
+            lines.push(`❌ 运行失败：${account.error ?? '未知错误'}`)
+        }
+        lines.push(`➕ 本次增加积分：${account.collectedPoints} 分`)
+        lines.push(`💰 当前积分：${account.finalPoints} 分`)
+    })
+
+    lines.push('', '════════════', `📈 总增加积分：${totalCollected} 分`, `💰 当前积分合计：${totalBalance} 分`)
+    return lines.join('\n')
 }

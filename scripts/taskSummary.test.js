@@ -18,10 +18,10 @@ test('collects daily task results and points from logger events', () => {
     tracker.record('SEARCH-MANAGER', 'Search summary | mobile=5 | desktop=10 | bonus=2 | total=17')
 
     const items = tracker.snapshot()
-    assert.match(formatTaskSummary(items), /每日签到 \+5分/)
-    assert.match(formatTaskSummary(items), /阅读赚积分 \+30分/)
-    assert.match(formatTaskSummary(items), /更多活动 \+15分/)
-    assert.match(formatTaskSummary(items), /搜索 \+17分/)
+    assert.match(formatTaskSummary(items), /每日签到：已完成（\+5 分）/)
+    assert.match(formatTaskSummary(items), /阅读赚积分：已完成（\+30 分）/)
+    assert.match(formatTaskSummary(items), /更多活动：已完成（\+15 分）/)
+    assert.match(formatTaskSummary(items), /搜索：已完成（\+17 分）/)
 
     const summary = formatRunSummary([
         {
@@ -33,10 +33,14 @@ test('collects daily task results and points from logger events', () => {
             tasks: items
         }
     ])
-    assert.match(summary, /今日任务汇总/)
-    assert.match(summary, /增加 50 分/)
-    assert.match(summary, /当前 1050 分/)
+    assert.match(summary, /📊 Microsoft Rewards 今日任务汇总\n\n/)
+    assert.match(summary, /📋 任务完成情况：\n/)
+    assert.match(summary, /每日签到：/)
+    assert.match(summary, /阅读赚积分：/)
+    assert.match(summary, /本次增加积分：50 分/)
+    assert.match(summary, /当前积分：1050 分/)
     assert.match(summary, /a\*\*\*@example\.com/)
+    assert.doesNotMatch(summary, / \| /)
 })
 
 test('resets account task state between accounts', () => {

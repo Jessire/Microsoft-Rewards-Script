@@ -18,6 +18,7 @@ export interface IpcLog {
     title: string
     webhookAllowed: boolean
     telegramAllowed: boolean
+    telegramContent: string
 }
 
 type ChalkFn = (msg: string) => string
@@ -131,6 +132,7 @@ export class Logger {
         const consoleAllowed = this.shouldPassFilter(config.consoleLogFilter, level, cleanMsg)
         const webhookAllowed = this.shouldPassFilter(config.webhook.webhookLogFilter, level, cleanMsg)
         const telegramAllowed = shouldSendTelegram(config.webhook.telegram, title, webhookAllowed)
+        const telegramContent = title === 'DAILY-SUMMARY' && typeof message === 'string' ? message : cleanMsg
 
         if (consoleAllowed) {
             consoleOut(level, consoleStr, getColorFn(logColor))
@@ -150,7 +152,7 @@ export class Logger {
             }
 
             if (telegramAllowed && level !== 'debug') {
-                sendTelegram(config.webhook.telegram!, cleanMsg, level)
+                sendTelegram(config.webhook.telegram!, telegramContent, level)
             }
 
             if (
@@ -163,7 +165,7 @@ export class Logger {
             }
         } else {
             process.send?.({
-                __ipcLog: { content: cleanMsg, level, title, webhookAllowed, telegramAllowed }
+                __ipcLog: { content: cleanMsg, level, title, webhookAllowed, telegramAllowed, telegramContent }
             })
         }
     }

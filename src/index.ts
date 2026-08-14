@@ -316,7 +316,7 @@ export class MicrosoftRewardsBot {
                 const log = msg.__ipcLog
                 if (log && typeof log.content === 'string') {
                     const { webhook } = this.config
-                    const { content, level, webhookAllowed, telegramAllowed } = log
+                    const { content, level, webhookAllowed, telegramAllowed, telegramContent } = log
 
                     if (webhookAllowed && webhook.discord?.enabled && webhook.discord.url && level !== 'debug') {
                         sendDiscord(webhook.discord.url, content, level)
@@ -325,7 +325,7 @@ export class MicrosoftRewardsBot {
                         sendNtfy(webhook.ntfy, content, level)
                     }
                     if (telegramAllowed && level !== 'debug') {
-                        sendTelegram(webhook.telegram!, content, level)
+                        sendTelegram(webhook.telegram!, telegramContent, level)
                     }
                 }
             })

@@ -26,12 +26,15 @@ function getTelegramEmoji(level: LogLevel): string {
     }
 }
 
+export function formatTelegramContent(content: string, level: LogLevel): string {
+    if (content.startsWith('📊 Microsoft Rewards')) return content
+    return `${getTelegramEmoji(level)}\n${content}`
+}
+
 export async function sendTelegram(config: WebhookTelegramConfig, content: string, level: LogLevel): Promise<void> {
     if (!config?.botToken || !config?.chatId) return
 
-    const emoji = getTelegramEmoji(level)
-    const message = `${emoji}\n\`\`\`\n${content}\n\`\`\``
-
+    const message = formatTelegramContent(content, level)
     const url = `https://api.telegram.org/bot${config.botToken}/sendMessage`
 
     const request: HttpRequestConfig = {
@@ -41,7 +44,6 @@ export async function sendTelegram(config: WebhookTelegramConfig, content: strin
         data: {
             chat_id: config.chatId,
             text: message,
-            parse_mode: 'MarkdownV2',
             disable_notification: level === 'debug'
         },
         timeout: 10000
