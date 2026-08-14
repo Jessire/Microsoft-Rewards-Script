@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 
+import { extractRewardsSnapshot } from '../dist/browser/RewardsSnapshot.js'
 import { formatRunSummary, formatTaskSummary, TaskSummaryTracker } from '../dist/logging/TaskSummary.js'
 
 test('collects daily task results and points from logger events', () => {
@@ -23,6 +24,24 @@ test('collects daily task results and points from logger events', () => {
     assert.match(formatTaskSummary(items), /更多活动：已完成（\+15 分）/)
     assert.match(formatTaskSummary(items), /搜索：已完成（\+17 分）/)
 
+    const rewardsSnapshot = extractRewardsSnapshot(
+        {
+            dashboard: {
+                userStatus: { availablePoints: 11918 },
+                pointClaimBannerPromotion: { attributes: { claimable_points: '0' } },
+                streakProtectionPromo: { streakCount: '11' }
+            },
+            status: { pointsSummary: [{ dayOfWeek: 5, pointsEarned: 180 }] }
+        },
+        new Date(2026, 7, 14, 12)
+    )
+    assert.deepEqual(rewardsSnapshot, {
+        availablePoints: 11918,
+        claimablePoints: 0,
+        todayPoints: 180,
+        streakDays: 11
+    })
+
     const summary = formatRunSummary([
         {
             email: 'alice@example.com',
@@ -30,15 +49,22 @@ test('collects daily task results and points from logger events', () => {
             finalPoints: 1050,
             collectedPoints: 50,
             success: true,
-            tasks: items
+            tasks: items,
+            rewardsSnapshot
         }
     ])
     assert.match(summary, /📊 Microsoft Rewards 今日任务汇总\n\n/)
     assert.match(summary, /📋 任务完成情况：\n/)
     assert.match(summary, /每日签到：/)
     assert.match(summary, /阅读赚积分：/)
-    assert.match(summary, /本次增加积分：50 分/)
-    assert.match(summary, /当前积分：1050 分/)
+    assert.match(summary, /官网积分概况：/)
+    assert.match(summary, /可用积分：11,918 分/)
+    assert.match(summary, /可领取：0 分/)
+    assert.match(summary, /今日积分：180 分/)
+    assert.match(summary, /每日连续打卡：11 天/)
+    assert.match(summary, /本次运行增加积分：50 分/)
+    assert.match(summary, /当前可用积分：11,918 分/)
+    assert.match(summary, /今日积分合计：180 分/)
     assert.match(summary, /a\*\*\*@example\.com/)
     assert.doesNotMatch(summary, / \| /)
 })

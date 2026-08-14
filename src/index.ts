@@ -7,6 +7,7 @@ import type { BrowserFingerprintWithHeaders } from 'fingerprint-generator'
 
 import Browser from './browser/Browser'
 import BrowserFunc from './browser/BrowserFunc'
+import type { RewardsSnapshot } from './browser/RewardsSnapshot'
 import BrowserUtils from './browser/BrowserUtils'
 import ReactFunc from './browser/ReactFunc'
 import type { PageSnapshot } from './browser/ReactFunc'
@@ -52,6 +53,7 @@ interface AccountStats {
     duration: number
     success: boolean
     tasks: TaskSummaryItem[]
+    rewardsSnapshot?: RewardsSnapshot
     error?: string
 }
 
@@ -447,23 +449,24 @@ export class MicrosoftRewardsBot {
                     'Accept-Language': this.accountLocale.acceptLanguage
                 })
 
-                const result: { initialPoints: number; collectedPoints: number } | undefined = await this.Main(
-                    account
-                ).catch(error => {
-                    void this.logger.error(
-                        true,
-                        'FLOW',
-                        `Mobile flow failed for ${accountEmail}: ${error instanceof Error ? error.message : String(error)}`
-                    )
-                    return undefined
-                })
+                const result:
+                    { initialPoints: number; collectedPoints: number; rewardsSnapshot?: RewardsSnapshot } | undefined =
+                    await this.Main(account).catch(error => {
+                        void this.logger.error(
+                            true,
+                            'FLOW',
+                            `Mobile flow failed for ${accountEmail}: ${error instanceof Error ? error.message : String(error)}`
+                        )
+                        return undefined
+                    })
 
                 const durationSeconds = ((Date.now() - accountStartTime) / 1000).toFixed(1)
 
                 if (result) {
                     const collectedPoints = result.collectedPoints ?? 0
                     const accountInitialPoints = result.initialPoints ?? 0
-                    const accountFinalPoints = accountInitialPoints + collectedPoints
+                    const accountFinalPoints =
+                        result.rewardsSnapshot?.availablePoints ?? accountInitialPoints + collectedPoints
 
                     accountStats.push({
                         email: accountEmail,
@@ -472,7 +475,8 @@ export class MicrosoftRewardsBot {
                         collectedPoints: collectedPoints,
                         duration: parseFloat(durationSeconds),
                         success: true,
-                        tasks: this.taskSummary.snapshot()
+                        tasks: this.taskSummary.snapshot(),
+                        rewardsSnapshot: result.rewardsSnapshot
                     })
 
                     this.logger.info(
@@ -569,7 +573,9 @@ export class MicrosoftRewardsBot {
         return session
     }
 
-    async Main(account: Account): Promise<{ initialPoints: number; collectedPoints: number }> {
+    async Main(
+        account: Account
+    ): Promise<{ initialPoints: number; collectedPoints: number; rewardsSnapshot?: RewardsSnapshot }> {
         const accountEmail = account.email
         this.logger.info('main', 'FLOW', `Starting session for ${accountEmail}`)
 
@@ -865,18 +871,24 @@ export class MicrosoftRewardsBot {
                     edgeBrowsingTask = null
                 }
 
-                const finalPoints = await this.browser.func.getCurrentPoints()
+                const rewardsSnapshot = await this.browser.func.getRewardsSnapshot()
+                const finalPoints = rewardsSnapshot.availablePoints ?? (await this.browser.func.getCurrentPoints())
                 const collectedPoints = finalPoints - initialPoints
 
                 this.logger.info(
                     'main',
                     'FLOW',
-                    `Points collected | pointsGained=${collectedPoints} | currentBalance=${finalPoints} | account=${accountEmail}`
+                    `Points collected | pointsGained=${collectedPoints} | currentBalance=${finalPoints} | todayPoints=${
+                        rewardsSnapshot.todayPoints ?? 'n/a'
+                    } | claimablePoints=${rewardsSnapshot.claimablePoints ?? 'n/a'} | streakDays=${
+                        rewardsSnapshot.streakDays ?? 'n/a'
+                    } | account=${accountEmail}`
                 )
 
                 return {
                     initialPoints,
-                    collectedPoints: collectedPoints || 0
+                    collectedPoints: collectedPoints || 0,
+                    rewardsSnapshot
                 }
             })
         } finally {

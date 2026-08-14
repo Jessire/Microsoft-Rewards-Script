@@ -1,3 +1,5 @@
+import type { RewardsSnapshot } from '../browser/RewardsSnapshot'
+
 export interface TaskSummaryItem {
     key: string
     name: string
@@ -178,12 +180,42 @@ export interface RunSummaryAccount {
     collectedPoints: number
     success: boolean
     tasks?: TaskSummaryItem[]
+    rewardsSnapshot?: RewardsSnapshot
     error?: string
+}
+
+function formatPoints(value: number | null): string {
+    return value === null ? '未获取' : `${value.toLocaleString('zh-CN')} 分`
+}
+
+function effectiveBalance(account: RunSummaryAccount): number {
+    return account.rewardsSnapshot?.availablePoints ?? account.finalPoints
+}
+
+function formatRewardsSnapshot(snapshot: RewardsSnapshot): string[] {
+    const streak = snapshot.streakDays === null ? '未获取' : `${snapshot.streakDays} 天`
+    return [
+        '📌 官网积分概况：',
+        `  💳 可用积分：${formatPoints(snapshot.availablePoints)}`,
+        `  🎁 可领取：${formatPoints(snapshot.claimablePoints)}`,
+        `  📅 今日积分：${formatPoints(snapshot.todayPoints)}`,
+        `  🔥 每日连续打卡：${streak}`
+    ]
 }
 
 export function formatRunSummary(accounts: RunSummaryAccount[]): string {
     const totalCollected = accounts.reduce((sum, account) => sum + account.collectedPoints, 0)
-    const totalBalance = accounts.reduce((sum, account) => sum + account.finalPoints, 0)
+    const totalBalance = accounts.reduce((sum, account) => sum + effectiveBalance(account), 0)
+    const snapshots = accounts.map(account => account.rewardsSnapshot).filter(Boolean) as RewardsSnapshot[]
+    const allSnapshotsAvailable = snapshots.length > 0 && snapshots.length === accounts.length
+    const totalToday =
+        allSnapshotsAvailable && snapshots.every(snapshot => snapshot.todayPoints !== null)
+            ? snapshots.reduce((sum, snapshot) => sum + (snapshot.todayPoints ?? 0), 0)
+            : null
+    const totalClaimable =
+        allSnapshotsAvailable && snapshots.every(snapshot => snapshot.claimablePoints !== null)
+            ? snapshots.reduce((sum, snapshot) => sum + (snapshot.claimablePoints ?? 0), 0)
+            : null
     const lines = ['📊 Microsoft Rewards 今日任务汇总', '']
 
     if (!accounts.length) {
@@ -201,13 +233,17 @@ export function formatRunSummary(accounts: RunSummaryAccount[]): string {
                     .split('\n')
                     .map(line => `  ${line}`)
             )
+            if (account.rewardsSnapshot) lines.push('', ...formatRewardsSnapshot(account.rewardsSnapshot))
         } else {
             lines.push(`❌ 运行失败：${account.error ?? '未知错误'}`)
         }
-        lines.push(`➕ 本次增加积分：${account.collectedPoints} 分`)
-        lines.push(`💰 当前积分：${account.finalPoints} 分`)
+        lines.push(`➕ 本次运行增加积分：${account.collectedPoints} 分`)
+        lines.push(`💰 当前可用积分：${formatPoints(account.rewardsSnapshot?.availablePoints ?? account.finalPoints)}`)
     })
 
-    lines.push('', '════════════', `📈 总增加积分：${totalCollected} 分`, `💰 当前积分合计：${totalBalance} 分`)
+    lines.push('', '════════════', `📈 本次运行增加积分合计：${totalCollected} 分`)
+    if (totalToday !== null) lines.push(`📅 今日积分合计：${formatPoints(totalToday)}`)
+    if (totalClaimable !== null) lines.push(`🎁 可领取合计：${formatPoints(totalClaimable)}`)
+    lines.push(`💰 当前可用积分合计：${formatPoints(totalBalance)}`)
     return lines.join('\n')
 }

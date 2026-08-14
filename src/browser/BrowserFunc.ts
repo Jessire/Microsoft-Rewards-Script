@@ -11,6 +11,7 @@ import { isBrowserClosedError } from '../util/Utils'
 import type { DashboardData } from './../interface/DashboardData'
 import type { AppUserData } from '../interface/AppUserData'
 import type { AppEarnablePoints, BrowserEarnablePoints } from '../interface/Points'
+import { extractRewardsSnapshot, type RewardsSnapshot } from './RewardsSnapshot'
 import type { AppDashboardData } from '../interface/AppDashBoardData'
 
 export default class BrowserFunc {
@@ -185,6 +186,20 @@ export default class BrowserFunc {
             this.bot.logger.error(
                 this.bot.isMobile,
                 'GET-APP-EARNABLE-POINTS',
+                `An error occurred: ${error instanceof Error ? error.message : String(error)}`
+            )
+            throw error
+        }
+    }
+
+    async getRewardsSnapshot(): Promise<RewardsSnapshot> {
+        try {
+            const data = await this.getDashboardData()
+            return extractRewardsSnapshot(data)
+        } catch (error) {
+            this.bot.logger.error(
+                this.bot.isMobile,
+                'GET-REWARDS-SNAPSHOT',
                 `An error occurred: ${error instanceof Error ? error.message : String(error)}`
             )
             throw error
