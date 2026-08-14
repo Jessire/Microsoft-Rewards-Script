@@ -1,37 +1,43 @@
 export interface Config {
-    baseURL: string
     sessionPath: string
     headless: boolean
     clusters: number
     errorDiagnostics: boolean
     ensureStreakProtection: boolean
+    autoClaimPunchcardRewards: boolean
+    skipNonPointTasks: boolean
+    accountDelay: ConfigDelay
     workers: ConfigWorkers
+    activities: ConfigActivities
     searchOnBingLocalQueries: boolean
     globalTimeout: number | string
     searchSettings: ConfigSearchSettings
+    experimental: ConfigExperimental
     debugLogs: boolean
     proxy: ConfigProxy
     consoleLogFilter: LogFilter
     webhook: ConfigWebhook
 }
 
-export type QueryEngine = 'china' | 'google' | 'wikipedia' | 'reddit' | 'local'
+export type QueryEngine = 'google' | 'wikipedia' | 'wikirandom' | 'hackernews' | 'reddit' | 'local' | 'china'
+
+// RSS feeds are selected with a dotted path: 'rss' (every catalogued feed),
+// 'rss.<site>' (every feed for that site), or 'rss.<site>.<endpoint>' (one feed).
+export type RssFeedSelector = 'rss' | `rss.${string}`
+export type QueryEngineEntry = QueryEngine | RssFeedSelector
 
 export interface ConfigSearchSettings {
     scrollRandomResults: boolean
     clickRandomResults: boolean
+    runOnZeroPoints: boolean
+    maxBonusSearches: number
     parallelSearching: boolean
-    queryEngines: QueryEngine[]
+    clusterSearch: boolean
+    queryEngines: QueryEngineEntry[]
+    chinaApi?: ConfigChinaApi
     searchResultVisitTime: number | string
     searchDelay: ConfigDelay
     readDelay: ConfigDelay
-    /**
-     * 中国热搜源（gmya.net）配置。
-     * appkey 留空走免费档（有频率限制）；填入则带 appkey 请求以解除限流。
-     */
-    chinaApi?: {
-        appkey?: string
-    }
 }
 
 export interface ConfigDelay {
@@ -39,27 +45,47 @@ export interface ConfigDelay {
     max: number | string
 }
 
+export interface ConfigExperimental {
+    apiSearch: boolean
+    apiSearchOnBing: boolean
+    blockMedia: boolean
+    edgeBrowsing: boolean
+}
+
+export interface ConfigChinaApi {
+    appkey?: string
+}
+
 export interface ConfigProxy {
     queryEngine: boolean
+    ignoreCertificateErrors: boolean
 }
 
 export interface ConfigWorkers {
     doDailySet: boolean
-    doSpecialPromotions: boolean
     doMorePromotions: boolean
     doClaimBonusPoints: boolean
     doPunchCards: boolean
     doAppPromotions: boolean
     doDesktopSearch: boolean
     doMobileSearch: boolean
+    doBonusSearches: boolean
     doDailyCheckIn: boolean
     doReadToEarn: boolean
+    doActivateSearchPerk: boolean
+    doVisualSearch: boolean
+}
+
+export interface ConfigActivities {
+    urlReward: boolean
+    searchOnBing: boolean
 }
 
 // Webhooks
 export interface ConfigWebhook {
     discord?: WebhookDiscordConfig
     ntfy?: WebhookNtfyConfig
+    telegram?: WebhookTelegramConfig
     pushplus?: WebhookPushPlusConfig
     webhookLogFilter: LogFilter
 }
@@ -85,6 +111,12 @@ export interface WebhookNtfyConfig {
     title?: string
     tags?: string[]
     priority?: 1 | 2 | 3 | 4 | 5 // 5 highest (important)
+}
+
+export interface WebhookTelegramConfig {
+    enabled?: boolean
+    botToken: string
+    chatId: string | number
 }
 
 export interface WebhookPushPlusConfig {
