@@ -7,6 +7,7 @@ import { sendPushPlus } from './PushPlus'
 import type { MicrosoftRewardsBot } from '../index'
 import { errorDiagnostic } from '../util/ErrorDiagnostic'
 import type { LogFilter } from '../interface/Config'
+import { shouldSendTelegram } from './NotificationPolicy'
 
 export type Platform = boolean | 'main'
 export type LogLevel = 'info' | 'warn' | 'error' | 'debug'
@@ -14,6 +15,9 @@ export type ColorKey = keyof typeof chalk
 export interface IpcLog {
     content: string
     level: LogLevel
+    title: string
+    webhookAllowed: boolean
+    telegramAllowed: boolean
 }
 
 type ChalkFn = (msg: string) => string
@@ -126,41 +130,41 @@ export class Logger {
 
         const consoleAllowed = this.shouldPassFilter(config.consoleLogFilter, level, cleanMsg)
         const webhookAllowed = this.shouldPassFilter(config.webhook.webhookLogFilter, level, cleanMsg)
+        const telegramAllowed = shouldSendTelegram(config.webhook.telegram, title, webhookAllowed)
 
         if (consoleAllowed) {
             consoleOut(level, consoleStr, getColorFn(logColor))
         }
 
-        if (!webhookAllowed) {
+        if (!webhookAllowed && !telegramAllowed) {
             return
         }
 
         if (cluster.isPrimary) {
-            if (config.webhook.discord?.enabled && config.webhook.discord.url) {
-                if (level === 'debug') return
+            if (webhookAllowed && config.webhook.discord?.enabled && config.webhook.discord.url && level !== 'debug') {
                 sendDiscord(config.webhook.discord.url, cleanMsg, level)
             }
 
-            if (config.webhook.ntfy?.enabled && config.webhook.ntfy.url) {
-                if (level === 'debug') return
+            if (webhookAllowed && config.webhook.ntfy?.enabled && config.webhook.ntfy.url && level !== 'debug') {
                 sendNtfy(config.webhook.ntfy, cleanMsg, level)
             }
 
-            if (
-                config.webhook.telegram?.enabled &&
-                config.webhook.telegram.botToken &&
-                config.webhook.telegram.chatId
-            ) {
-                if (level === 'debug') return
-                sendTelegram(config.webhook.telegram, cleanMsg, level)
+            if (telegramAllowed && level !== 'debug') {
+                sendTelegram(config.webhook.telegram!, cleanMsg, level)
             }
 
-            if (config.webhook.pushplus?.enabled && config.webhook.pushplus.token) {
-                if (level === 'debug') return
+            if (
+                webhookAllowed &&
+                config.webhook.pushplus?.enabled &&
+                config.webhook.pushplus.token &&
+                level !== 'debug'
+            ) {
                 sendPushPlus(config.webhook.pushplus, cleanMsg)
             }
         } else {
-            process.send?.({ __ipcLog: { content: cleanMsg, level } })
+            process.send?.({
+                __ipcLog: { content: cleanMsg, level, title, webhookAllowed, telegramAllowed }
+            })
         }
     }
 

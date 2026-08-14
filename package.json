@@ -26,7 +26,8 @@
         "clear-diagnostics": "rimraf diagnostics",
         "clear-sessions": "node ./scripts/main/clearSessions.js",
         "open-session": "node ./scripts/main/browserSession.js -email",
-        "test:task-summary": "npm run build && node --test scripts/taskSummary.test.js"
+        "test:task-summary": "npm run build && node --test scripts/taskSummary.test.js",
+        "test:telegram": "npm run build && node --test scripts/telegramNotification.test.js"
     },
     "keywords": [
         "Bing Rewards",

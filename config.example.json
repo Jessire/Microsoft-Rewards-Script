@@ -89,7 +89,8 @@
         "telegram": {
             "enabled": false,
             "botToken": "",
-            "chatId": ""
+            "chatId": "",
+            "summaryOnly": true
         },
         "ntfy": {
             "enabled": false,

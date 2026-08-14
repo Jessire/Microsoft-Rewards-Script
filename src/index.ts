@@ -316,16 +316,16 @@ export class MicrosoftRewardsBot {
                 const log = msg.__ipcLog
                 if (log && typeof log.content === 'string') {
                     const { webhook } = this.config
-                    const { content, level } = log
+                    const { content, level, webhookAllowed, telegramAllowed } = log
 
-                    if (webhook.discord?.enabled && webhook.discord.url) {
+                    if (webhookAllowed && webhook.discord?.enabled && webhook.discord.url && level !== 'debug') {
                         sendDiscord(webhook.discord.url, content, level)
                     }
-                    if (webhook.ntfy?.enabled && webhook.ntfy.url) {
+                    if (webhookAllowed && webhook.ntfy?.enabled && webhook.ntfy.url && level !== 'debug') {
                         sendNtfy(webhook.ntfy, content, level)
                     }
-                    if (webhook.telegram?.enabled && webhook.telegram.botToken && webhook.telegram.chatId) {
-                        sendTelegram(webhook.telegram, content, level)
+                    if (telegramAllowed && level !== 'debug') {
+                        sendTelegram(webhook.telegram!, content, level)
                     }
                 }
             })
