@@ -29,6 +29,7 @@ import { sendDiscord, flushDiscordQueue } from './logging/Discord'
 import { sendNtfy, flushNtfyQueue } from './logging/Ntfy'
 import { sendTelegram, flushTelegramQueue } from './logging/Telegram'
 import { flushPushPlusQueue } from './logging/PushPlus'
+import { formatRunSummary, TaskSummaryTracker, type TaskSummaryItem } from './logging/TaskSummary'
 import type { DashboardData } from './interface/DashboardData'
 import type { AppDashboardData } from './interface/AppDashBoardData'
 import type { AppEarnablePoints } from './interface/Points'
@@ -50,6 +51,7 @@ interface AccountStats {
     collectedPoints: number
     duration: number
     success: boolean
+    tasks: TaskSummaryItem[]
     error?: string
 }
 
@@ -120,6 +122,7 @@ export class MicrosoftRewardsBot {
     private accounts: Account[]
     private searchManager: SearchManager
     private login = new Login(this)
+    private taskSummary = new TaskSummaryTracker()
 
     public http!: HttpClient
 
@@ -155,6 +158,10 @@ export class MicrosoftRewardsBot {
 
     get currentAccountEmail(): string | null {
         return getCurrentContext().account?.email || null
+    }
+
+    public recordTaskLog(title: string, message: string): void {
+        this.taskSummary.record(title, message)
     }
 
     async refreshCurrentRewardsContext(reason: string): Promise<boolean> {
@@ -357,6 +364,7 @@ export class MicrosoftRewardsBot {
                     `Completed all accounts | accountsProcessed=${allAccountStats.length} | pointsGained=${totalCollectedPoints} | previousBalance=${totalInitialPoints} | currentBalance=${totalFinalPoints} | runtimeMinutes=${totalDurationMinutes}`,
                     'green'
                 )
+                this.logger.info('main', 'DAILY-SUMMARY', formatRunSummary(allAccountStats), 'green')
 
                 await flushAllWebhooks()
 
@@ -416,6 +424,7 @@ export class MicrosoftRewardsBot {
 
             const accountStartTime = Date.now()
             const accountEmail = account.email
+            this.taskSummary.reset()
             this.userData.userName = this.utils.getEmailUsername(accountEmail)
             this.userData.timezoneOffset = String(new Date().getTimezoneOffset())
 
@@ -462,7 +471,8 @@ export class MicrosoftRewardsBot {
                         finalPoints: accountFinalPoints,
                         collectedPoints: collectedPoints,
                         duration: parseFloat(durationSeconds),
-                        success: true
+                        success: true,
+                        tasks: this.taskSummary.snapshot()
                     })
 
                     this.logger.info(
@@ -479,6 +489,7 @@ export class MicrosoftRewardsBot {
                         collectedPoints: 0,
                         duration: parseFloat(durationSeconds),
                         success: false,
+                        tasks: this.taskSummary.snapshot(),
                         error: 'Flow failed'
                     })
                 }
@@ -497,6 +508,7 @@ export class MicrosoftRewardsBot {
                     collectedPoints: 0,
                     duration: parseFloat(durationSeconds),
                     success: false,
+                    tasks: this.taskSummary.snapshot(),
                     error: error instanceof Error ? error.message : String(error)
                 })
             }
@@ -514,6 +526,7 @@ export class MicrosoftRewardsBot {
                 `Completed all accounts | accountsProcessed=${accountStats.length} | pointsGained=${totalCollectedPoints} | previousBalance=${totalInitialPoints} | currentBalance=${totalFinalPoints} | runtimeMinutes=${totalDurationMinutes}`,
                 'green'
             )
+            this.logger.info('main', 'DAILY-SUMMARY', formatRunSummary(accountStats), 'green')
 
             await flushAllWebhooks()
             process.exit(0)

@@ -413,6 +413,7 @@ Account browser proxies support `http://`, `https://`, `socks4://`, and `socks5:
 > **NTFY** users set the `webhookLogFilter` to `enabled`, or you will receive push notifications for _all_ logs.
 > When enabled, only account start, 2FA codes, and account completion summaries are delivered as push notifications.
 > Customize which notifications you receive with the `keywords` options.
+> Telegram and the other webhooks receive a final `DAILY-SUMMARY` notification with completed task names, points gained for the run, and the current points total for each account.
 
 ---
 

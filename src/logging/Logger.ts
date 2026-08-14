@@ -89,6 +89,8 @@ export class Logger {
         const levelTag = level.toUpperCase()
         const cleanMsg = `[${now}] [${userName}] [${levelTag}] ${platformText(isMobile)} [${title}] ${formatted}`
 
+        this.bot.recordTaskLog(title, formatted)
+
         const config = this.bot.config
 
         if (level === 'debug' && !config.debugLogs && !process.argv.includes('-dev')) {

@@ -25,7 +25,8 @@
         "format:check": "prettier --check .",
         "clear-diagnostics": "rimraf diagnostics",
         "clear-sessions": "node ./scripts/main/clearSessions.js",
-        "open-session": "node ./scripts/main/browserSession.js -email"
+        "open-session": "node ./scripts/main/browserSession.js -email",
+        "test:task-summary": "npm run build && node --test scripts/taskSummary.test.js"
     },
     "keywords": [
         "Bing Rewards",
