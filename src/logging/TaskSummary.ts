@@ -125,12 +125,6 @@ export class TaskSummaryTracker {
     }
 }
 
-function maskEmail(email: string): string {
-    const [local, domain] = email.split('@')
-    if (!local || !domain) return email
-    return `${local.slice(0, 1)}***@${domain}`
-}
-
 function statusIcon(status: TaskSummaryStatus): string {
     switch (status) {
         case 'completed':
@@ -175,6 +169,7 @@ export function formatTaskSummary(items: TaskSummaryItem[]): string {
 
 export interface RunSummaryAccount {
     email: string
+    nickname?: string
     initialPoints: number
     finalPoints: number
     collectedPoints: number
@@ -190,6 +185,13 @@ function formatPoints(value: number | null): string {
 
 function effectiveBalance(account: RunSummaryAccount): number {
     return account.rewardsSnapshot?.availablePoints ?? account.finalPoints
+}
+
+function displayNickname(account: RunSummaryAccount): string {
+    const nickname = account.nickname?.trim()
+    if (nickname) return nickname
+
+    return '未知昵称'
 }
 
 function formatRewardsSnapshot(snapshot: RewardsSnapshot): string[] {
@@ -223,7 +225,7 @@ export function formatRunSummary(accounts: RunSummaryAccount[]): string {
     accounts.forEach((account, index) => {
         if (index > 0) lines.push('', '────────────', '')
 
-        lines.push(`👤 账号：${maskEmail(account.email)}`)
+        lines.push(`👤 昵称：${displayNickname(account)}`)
         if (account.success) {
             lines.push(
                 ...formatTaskSummary(account.tasks ?? [])

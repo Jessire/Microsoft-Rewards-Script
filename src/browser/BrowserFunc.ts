@@ -206,6 +206,47 @@ export default class BrowserFunc {
         }
     }
 
+    async getRewardsNickname(page?: Page): Promise<string | null> {
+        const sourcePage = page ?? this.getActivePage()
+        if (!sourcePage) return null
+
+        let lookupPage = sourcePage
+        let temporaryPage = false
+
+        try {
+            const sourceHost = new URL(sourcePage.url()).hostname
+            const rewardsHost = new URL(URLs.rewards.origin).hostname
+            if (sourceHost !== rewardsHost) {
+                lookupPage = await sourcePage.context().newPage()
+                temporaryPage = true
+                await lookupPage.goto(URLs.rewards.dashboard, {
+                    waitUntil: 'domcontentloaded',
+                    timeout: 15000
+                })
+            }
+
+            for (const selector of ['button p.pii', 'button p[class*="text-pageHeader"]']) {
+                const text = await lookupPage
+                    .locator(selector)
+                    .first()
+                    .textContent({ timeout: 5000 })
+                    .catch(() => null)
+                const nickname = text?.replace(/\s+/g, ' ').trim()
+                if (nickname) return nickname
+            }
+        } catch (error) {
+            this.bot.logger.debug(
+                this.bot.isMobile,
+                'GET-REWARDS-NICKNAME',
+                `Could not read Rewards nickname: ${error instanceof Error ? error.message : String(error)}`
+            )
+        } finally {
+            if (temporaryPage) await lookupPage.close().catch(() => {})
+        }
+
+        return null
+    }
+
     async getCurrentPoints(): Promise<number> {
         try {
             const data = await this.getDashboardData()

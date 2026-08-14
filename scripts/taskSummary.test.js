@@ -45,6 +45,7 @@ test('collects daily task results and points from logger events', () => {
     const summary = formatRunSummary([
         {
             email: 'alice@example.com',
+            nickname: 'Alice',
             initialPoints: 1000,
             finalPoints: 1050,
             collectedPoints: 50,
@@ -65,7 +66,8 @@ test('collects daily task results and points from logger events', () => {
     assert.doesNotMatch(summary, /官网积分概况：/)
     assert.doesNotMatch(summary, /可领取：0 分/)
     assert.doesNotMatch(summary, /合计：/)
-    assert.match(summary, /a\*\*\*@example\.com/)
+    assert.match(summary, /昵称：Alice/)
+    assert.doesNotMatch(summary, /example\.com/)
     assert.doesNotMatch(summary, / \| /)
 })
 

@@ -45,8 +45,16 @@ interface BrowserSession {
     fingerprint: BrowserFingerprintWithHeaders
 }
 
+interface MainResult {
+    initialPoints: number
+    collectedPoints: number
+    rewardsSnapshot?: RewardsSnapshot
+    nickname?: string
+}
+
 interface AccountStats {
     email: string
+    nickname: string
     initialPoints: number
     finalPoints: number
     collectedPoints: number
@@ -449,16 +457,14 @@ export class MicrosoftRewardsBot {
                     'Accept-Language': this.accountLocale.acceptLanguage
                 })
 
-                const result:
-                    { initialPoints: number; collectedPoints: number; rewardsSnapshot?: RewardsSnapshot } | undefined =
-                    await this.Main(account).catch(error => {
-                        void this.logger.error(
-                            true,
-                            'FLOW',
-                            `Mobile flow failed for ${accountEmail}: ${error instanceof Error ? error.message : String(error)}`
-                        )
-                        return undefined
-                    })
+                const result: MainResult | undefined = await this.Main(account).catch(error => {
+                    void this.logger.error(
+                        true,
+                        'FLOW',
+                        `Mobile flow failed for ${accountEmail}: ${error instanceof Error ? error.message : String(error)}`
+                    )
+                    return undefined
+                })
 
                 const durationSeconds = ((Date.now() - accountStartTime) / 1000).toFixed(1)
 
@@ -470,6 +476,7 @@ export class MicrosoftRewardsBot {
 
                     accountStats.push({
                         email: accountEmail,
+                        nickname: result.nickname ?? '未知昵称',
                         initialPoints: accountInitialPoints,
                         finalPoints: accountFinalPoints,
                         collectedPoints: collectedPoints,
@@ -488,6 +495,7 @@ export class MicrosoftRewardsBot {
                 } else {
                     accountStats.push({
                         email: accountEmail,
+                        nickname: '未知昵称',
                         initialPoints: 0,
                         finalPoints: 0,
                         collectedPoints: 0,
@@ -507,6 +515,7 @@ export class MicrosoftRewardsBot {
 
                 accountStats.push({
                     email: accountEmail,
+                    nickname: '未知昵称',
                     initialPoints: 0,
                     finalPoints: 0,
                     collectedPoints: 0,
@@ -573,9 +582,7 @@ export class MicrosoftRewardsBot {
         return session
     }
 
-    async Main(
-        account: Account
-    ): Promise<{ initialPoints: number; collectedPoints: number; rewardsSnapshot?: RewardsSnapshot }> {
+    async Main(account: Account): Promise<MainResult> {
         const accountEmail = account.email
         this.logger.info('main', 'FLOW', `Starting session for ${accountEmail}`)
 
@@ -626,6 +633,7 @@ export class MicrosoftRewardsBot {
                 this.logger.info('main', 'BROWSER', `Mobile Browser started | ${accountEmail}`)
 
                 await this.login.login(this.mainMobilePage, account)
+                const nickname = (await this.browser.func.getRewardsNickname(this.mainMobilePage)) ?? ''
 
                 try {
                     this.accessToken = await this.login.getAppAccessToken(this.mainMobilePage, accountEmail)
@@ -888,7 +896,8 @@ export class MicrosoftRewardsBot {
                 return {
                     initialPoints,
                     collectedPoints: collectedPoints || 0,
-                    rewardsSnapshot
+                    rewardsSnapshot,
+                    nickname: nickname || '未知昵称'
                 }
             })
         } finally {
